@@ -1,0 +1,3 @@
+[console_scripts]
+lan-monitor = lan_monitor.main:main
+

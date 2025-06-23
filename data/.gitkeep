@@ -1,0 +1,2 @@
+# This file ensures the data directory is included in version control
+# The actual database file will be created at runtime

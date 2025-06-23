@@ -1,0 +1,17 @@
+[Unit]
+Description=LAN Monitor Service
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/lan_monitor
+ExecStart=/usr/bin/python3 /home/pi/lan_monitor/main.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=lan_monitor
+
+[Install]
+WantedBy=multi-user.target

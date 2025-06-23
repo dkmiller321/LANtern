@@ -1,0 +1,70 @@
+# LAN Monitor Configuration
+
+# Network scanning settings
+network:
+  # Network subnet to scan (CIDR notation)
+  subnet: "192.168.1.0/24"
+  # Scan interval in seconds
+  scan_interval: 300  # 5 minutes
+  # Timeout for scan operations in seconds
+  scan_timeout: 10
+  # Number of parallel scan processes
+  scan_threads: 4
+
+# Database settings
+database:
+  # Database type: sqlite or json
+  type: "sqlite"
+  # Path to database file (relative to project root)
+  path: "data/devices.db"
+
+# Web dashboard settings
+web:
+  # Host to bind the web server
+  host: "0.0.0.0"
+  # Port for the web server
+  port: 8001
+  # Enable debug mode
+  debug: false
+  # Secret key for session management
+  secret_key: "change_this_to_a_random_string"
+  # Enable authentication
+  auth_enabled: false
+  # Username and password if auth is enabled
+  username: "admin"
+  password: "admin"
+
+# Notification settings
+notifications:
+  # Enable email notifications
+  email_enabled: false
+  # SMTP server settings
+  smtp_server: "smtp.gmail.com"
+  smtp_port: 587
+  smtp_username: "your-email@gmail.com"
+  smtp_password: "your-app-password"
+  # Email recipients (comma-separated)
+  recipients: "your-email@gmail.com"
+  
+  # Enable webhook notifications
+  webhook_enabled: false
+  # Webhook URL
+  webhook_url: "https://example.com/webhook"
+  
+  # Notification triggers
+  notify_on_join: true
+  notify_on_leave: true
+  # Only notify for specific devices (by MAC address)
+  # Leave empty to notify for all devices
+  watched_devices: []
+
+# Logging settings
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
+  # Path to log file (relative to project root)
+  file: "logs/lan_monitor.log"
+  # Maximum log file size in MB before rotation
+  max_size_mb: 10
+  # Number of backup log files to keep
+  backup_count: 5

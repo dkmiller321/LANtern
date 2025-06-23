@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6 col-lg-3 mb-3">
+        <div class="card h-100 border-primary">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-hdd-network text-primary"></i> Online Devices
+                </h5>
+                <p class="card-text display-4" id="online-count">{{ devices | selectattr('is_online', 'eq', true) | list | length }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3 mb-3">
+        <div class="card h-100 border-secondary">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-hdd text-secondary"></i> Total Devices
+                </h5>
+                <p class="card-text display-4" id="total-count">{{ devices | length }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3 mb-3">
+        <div class="card h-100 border-success">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-wifi text-success"></i> Network
+                </h5>
+                <p class="card-text h5" id="network-subnet">{{ network_info.network }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3 mb-3">
+        <div class="card h-100 border-info">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-clock-history text-info"></i> Last Scan
+                </h5>
+                <p class="card-text h5" id="last-scan-time">Just now</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-lg-8 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Device Activity</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="activityChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Vendor Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="vendorChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h3 class="mt-4 mb-3">Online Devices</h3>
+<div class="row" id="online-devices-container">
+    {% for device in devices %}
+        {% if device.is_online %}
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card device-card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            {% if device.hostname %}
+                                {{ device.hostname }}
+                            {% else %}
+                                {{ device.vendor or "Unknown Device" }}
+                            {% endif %}
+                        </h5>
+                        <span class="badge online-badge">Online</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text"><strong>MAC:</strong> {{ device.mac_address }}</p>
+                        <p class="card-text"><strong>IP:</strong> {{ device.ip_address }}</p>
+                        <p class="card-text"><strong>Vendor:</strong> {{ device.vendor or "Unknown" }}</p>
+                        <p class="card-text"><strong>First Seen:</strong> <span class="time-format">{{ device.first_seen }}</span></p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="/device/{{ device.mac_address }}" class="btn btn-sm btn-primary">View Details</a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+</div>
+
+<div class="alert alert-info mt-3" id="no-devices-message" style="display: {% if devices | selectattr('is_online', 'eq', true) | list | length > 0 %}none{% else %}block{% endif %};">
+    <i class="bi bi-info-circle"></i> No online devices found. Devices will appear here when they connect to your network.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Format timestamps
+    document.querySelectorAll('.time-format').forEach(el => {
+        const date = new Date(el.textContent);
+        el.textContent = date.toLocaleString();
+    });
+    
+    // Charts
+    let activityChart;
+    let vendorChart;
+    
+    function initCharts() {
+        // Activity chart
+        const activityCtx = document.getElementById('activityChart').getContext('2d');
+        activityChart = new Chart(activityCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Online Devices',
+                        data: [],
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            }
+        });
+        
+        // Vendor chart
+        const vendorCtx = document.getElementById('vendorChart').getContext('2d');
+        vendorChart = new Chart(vendorCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#4dc9f6',
+                        '#f67019',
+                        '#f53794',
+                        '#537bc4',
+                        '#acc236',
+                        '#166a8f',
+                        '#00a950',
+                        '#58595b',
+                        '#8549ba'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    }
+                }
+            }
+        });
+    }
+    
+    // Update charts with device data
+    function updateCharts(devices) {
+        // Update vendor chart
+        const vendors = {};
+        devices.forEach(device => {
+            const vendor = device.vendor || 'Unknown';
+            vendors[vendor] = (vendors[vendor] || 0) + 1;
+        });
+        
+        const vendorLabels = Object.keys(vendors);
+        const vendorData = Object.values(vendors);
+        
+        vendorChart.data.labels = vendorLabels;
+        vendorChart.data.datasets[0].data = vendorData;
+        vendorChart.update();
+        
+        // Update activity chart (simulate data for demo)
+        const now = new Date();
+        const times = [];
+        const counts = [];
+        
+        // Generate 24 hours of data points
+        for (let i = 0; i < 24; i++) {
+            const time = new Date(now);
+            time.setHours(now.getHours() - 23 + i);
+            times.push(time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+            
+            // Random count between 0 and current online count
+            const onlineCount = devices.filter(d => d.is_online).length;
+            counts.push(Math.floor(Math.random() * (onlineCount + 1)));
+        }
+        
+        // Set last point to current count
+        counts[counts.length - 1] = devices.filter(d => d.is_online).length;
+        
+        activityChart.data.labels = times;
+        activityChart.data.datasets[0].data = counts;
+        activityChart.update();
+    }
+    
+    // Update device cards
+    function updateDeviceCards(devices) {
+        const onlineDevices = devices.filter(d => d.is_online);
+        const container = document.getElementById('online-devices-container');
+        const noDevicesMessage = document.getElementById('no-devices-message');
+        
+        // Update counters
+        document.getElementById('online-count').textContent = onlineDevices.length;
+        document.getElementById('total-count').textContent = devices.length;
+        
+        // Show/hide no devices message
+        if (onlineDevices.length === 0) {
+            noDevicesMessage.style.display = 'block';
+        } else {
+            noDevicesMessage.style.display = 'none';
+        }
+        
+        // Clear container
+        container.innerHTML = '';
+        
+        // Add device cards
+        onlineDevices.forEach(device => {
+            const deviceName = device.hostname || device.vendor || 'Unknown Device';
+            const firstSeen = new Date(device.first_seen).toLocaleString();
+            
+            const card = `
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card device-card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">${deviceName}</h5>
+                            <span class="badge online-badge">Online</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text"><strong>MAC:</strong> ${device.mac_address}</p>
+                            <p class="card-text"><strong>IP:</strong> ${device.ip_address}</p>
+                            <p class="card-text"><strong>Vendor:</strong> ${device.vendor || 'Unknown'}</p>
+                            <p class="card-text"><strong>First Seen:</strong> ${firstSeen}</p>
+                        </div>
+                        <div class="card-footer">
+                            <a href="/device/${device.mac_address}" class="btn btn-sm btn-primary">View Details</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML += card;
+        });
+    }
+    
+    // Override the refresh function
+    function refreshData() {
+        fetch('/api/devices')
+            .then(response => response.json())
+            .then(devices => {
+                updateDeviceCards(devices);
+                updateCharts(devices);
+                updateNetworkInfo();
+                updateLastUpdated();
+                
+                // Update last scan time
+                document.getElementById('last-scan-time').textContent = new Date().toLocaleTimeString();
+            })
+            .catch(error => console.error('Error fetching devices:', error));
+    }
+    
+    // Initialize charts when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        initCharts();
+        updateCharts({{ devices | tojson }});
+        
+        // Update last scan time
+        document.getElementById('last-scan-time').textContent = new Date().toLocaleTimeString();
+    });
+</script>
+{% endblock %}

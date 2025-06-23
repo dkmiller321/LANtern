@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block page_title %}All Devices{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Device List</h5>
+                <div>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="deviceSearch" placeholder="Search devices...">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Filter</button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item filter-option" data-filter="all" href="#">All Devices</a></li>
+                            <li><a class="dropdown-item filter-option" data-filter="online" href="#">Online Only</a></li>
+                            <li><a class="dropdown-item filter-option" data-filter="offline" href="#">Offline Only</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item filter-option" data-filter="recent" href="#">Recently Seen</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="devicesTable">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Name/Vendor</th>
+                                <th>MAC Address</th>
+                                <th>IP Address</th>
+                                <th>First Seen</th>
+                                <th>Last Seen</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for device in devices %}
+                            <tr data-mac="{{ device.mac_address }}" class="device-row {% if device.is_online %}online{% else %}offline{% endif %}">
+                                <td>
+                                    {% if device.is_online %}
+                                    <span class="badge online-badge">Online</span>
+                                    {% else %}
+                                    <span class="badge offline-badge">Offline</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if device.hostname %}
+                                        {{ device.hostname }}
+                                    {% else %}
+                                        {{ device.vendor or "Unknown Device" }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ device.mac_address }}</td>
+                                <td>{{ device.ip_address }}</td>
+                                <td class="time-format">{{ device.first_seen }}</td>
+                                <td class="time-format">{{ device.last_seen }}</td>
+                                <td>
+                                    <a href="/device/{{ device.mac_address }}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-info-circle"></i> Details
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Total devices: <span id="deviceCount">{{ devices | length }}</span></span>
+                    <div>
+                        <span class="me-3">
+                            <i class="bi bi-circle-fill text-success"></i> Online: <span id="onlineCount">{{ devices | selectattr('is_online', 'eq', true) | list | length }}</span>
+                        </span>
+                        <span>
+                            <i class="bi bi-circle-fill text-danger"></i> Offline: <span id="offlineCount">{{ devices | selectattr('is_online', 'eq', false) | list | length }}</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info mt-3" id="no-devices-message" style="display: {% if devices | length > 0 %}none{% else %}block{% endif %};">
+    <i class="bi bi-info-circle"></i> No devices found. Devices will appear here when they are detected on your network.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Format timestamps
+    document.querySelectorAll('.time-format').forEach(el => {
+        const date = new Date(el.textContent);
+        el.textContent = date.toLocaleString();
+    });
+    
+    // Search functionality
+    const deviceSearch = document.getElementById('deviceSearch');
+    const devicesTable = document.getElementById('devicesTable');
+    const deviceRows = document.querySelectorAll('.device-row');
+    const noDevicesMessage = document.getElementById('no-devices-message');
+    
+    deviceSearch.addEventListener('input', filterDevices);
+    
+    // Filter options
+    const filterOptions = document.querySelectorAll('.filter-option');
+    let currentFilter = 'all';
+    
+    filterOptions.forEach(option => {
+        option.addEventListener('click', (e) => {
+            e.preventDefault();
+            currentFilter = e.target.dataset.filter;
+            filterDevices();
+        });
+    });
+    
+    function filterDevices() {
+        const searchTerm = deviceSearch.value.toLowerCase();
+        let visibleCount = 0;
+        let onlineCount = 0;
+        let offlineCount = 0;
+        
+        deviceRows.forEach(row => {
+            const mac = row.dataset.mac.toLowerCase();
+            const name = row.cells[1].textContent.toLowerCase();
+            const ip = row.cells[3].textContent.toLowerCase();
+            const isOnline = row.classList.contains('online');
+            
+            // Check if row matches search term
+            const matchesSearch = mac.includes(searchTerm) || 
+                                 name.includes(searchTerm) || 
+                                 ip.includes(searchTerm);
+            
+            // Check if row matches filter
+            let matchesFilter = true;
+            if (currentFilter === 'online') {
+                matchesFilter = isOnline;
+            } else if (currentFilter === 'offline') {
+                matchesFilter = !isOnline;
+            } else if (currentFilter === 'recent') {
+                // Consider "recent" as seen in the last 24 hours
+                const lastSeen = new Date(row.cells[5].textContent);
+                const now = new Date();
+                const hoursDiff = (now - lastSeen) / (1000 * 60 * 60);
+                matchesFilter = hoursDiff <= 24;
+            }
+            
+            // Show/hide row
+            if (matchesSearch && matchesFilter) {
+                row.style.display = '';
+                visibleCount++;
+                
+                if (isOnline) {
+                    onlineCount++;
+                } else {
+                    offlineCount++;
+                }
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        // Update counters
+        document.getElementById('deviceCount').textContent = visibleCount;
+        document.getElementById('onlineCount').textContent = onlineCount;
+        document.getElementById('offlineCount').textContent = offlineCount;
+        
+        // Show/hide no devices message
+        if (visibleCount === 0) {
+            noDevicesMessage.style.display = 'block';
+        } else {
+            noDevicesMessage.style.display = 'none';
+        }
+    }
+    
+    // Override the refresh function
+    function refreshData() {
+        fetch('/api/devices')
+            .then(response => response.json())
+            .then(devices => {
+                // Update the table
+                const tbody = devicesTable.querySelector('tbody');
+                tbody.innerHTML = '';
+                
+                devices.forEach(device => {
+                    const statusBadge = device.is_online ? 
+                        '<span class="badge online-badge">Online</span>' : 
+                        '<span class="badge offline-badge">Offline</span>';
+                    
+                    const deviceName = device.hostname || device.vendor || 'Unknown Device';
+                    const firstSeen = new Date(device.first_seen).toLocaleString();
+                    const lastSeen = new Date(device.last_seen).toLocaleString();
+                    
+                    const row = `
+                        <tr data-mac="${device.mac_address}" class="device-row ${device.is_online ? 'online' : 'offline'}">
+                            <td>${statusBadge}</td>
+                            <td>${deviceName}</td>
+                            <td>${device.mac_address}</td>
+                            <td>${device.ip_address}</td>
+                            <td>${firstSeen}</td>
+                            <td>${lastSeen}</td>
+                            <td>
+                                <a href="/device/${device.mac_address}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-info-circle"></i> Details
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                    
+                    tbody.innerHTML += row;
+                });
+                
+                // Update device rows reference
+                const newDeviceRows = document.querySelectorAll('.device-row');
+                deviceRows.forEach((row, i) => {
+                    if (i < newDeviceRows.length) {
+                        row.replaceWith(newDeviceRows[i]);
+                    }
+                });
+                
+                // Apply current filter
+                filterDevices();
+                
+                // Update network info and last updated
+                updateNetworkInfo();
+                updateLastUpdated();
+            })
+            .catch(error => console.error('Error fetching devices:', error));
+    }
+</script>
+{% endblock %}
