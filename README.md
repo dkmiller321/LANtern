@@ -29,17 +29,7 @@ A powerful network monitoring application that scans your local network, tracks 
 
 ## Installation
 
-### Option 1: Install from PyPI (recommended)
-
-```bash
-# Install the package
-pip install lan-monitor
-
-# Run the application
-lan-monitor
-```
-
-### Option 2: Install from source
+### Option 1: Install from source
 
 ```bash
 # Clone the repository
@@ -53,7 +43,7 @@ pip install -e .
 lan-monitor
 ```
 
-### Option 3: Run without installing
+### Option 2: Run without installing
 
 ```bash
 # Clone the repository
