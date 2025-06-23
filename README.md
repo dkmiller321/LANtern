@@ -1,6 +1,6 @@
-# LAN Monitor
+# LANtern
 
-A powerful network monitoring application that scans your local network, tracks device presence, and provides a web dashboard - similar to a simplified FingBox.
+A powerful network monitoring application that scans your local network, tracks device presence, and provides a web dashboard
 
 ## Features
 
@@ -18,7 +18,7 @@ A powerful network monitoring application that scans your local network, tracks 
 
 ## Screenshots
 
-(Screenshots would be added here in a real project)
+(Screenshots added here)
 
 ## Requirements
 
