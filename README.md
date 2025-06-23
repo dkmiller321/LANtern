@@ -18,7 +18,9 @@ A powerful network monitoring application that scans your local network, tracks 
 
 ## Screenshots
 
-(Screenshots added here)
+![image](https://github.com/user-attachments/assets/6edb680f-d856-4f4e-98e3-bd74f8a06ffb)
+
+
 
 ## Requirements
 
